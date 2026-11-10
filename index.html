@@ -9,6 +9,22 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#f0b92b">
+<meta name="description" content="Merge PDFs, turn pictures into PDF, delete, reorder and resize pages, split, and export to Word. Runs in your browser. Less fuss, more PDF.">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="pdf-ep">
+<meta property="og:title" content="pdf-ep | Less fuss. More PDF.">
+<meta property="og:description" content="Merge PDFs, convert pictures to PDF, delete, reorder, resize and split pages, and export to Word. Supports .pdf, .jpg, .jpeg, .jfif.">
+<meta property="og:url" content="https://allan02ace.github.io/pdf-ep/">
+<meta property="og:image" content="https://allan02ace.github.io/pdf-ep/preview.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="pdf-ep: less fuss, more pdf.">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="pdf-ep | Less fuss. More PDF.">
+<meta name="twitter:description" content="Merge, edit, resize and split PDFs, convert pictures to PDF, and export to Word.">
+<meta name="twitter:image" content="https://allan02ace.github.io/pdf-ep/preview.jpg">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;800&display=swap">
 <style>
 :root{--bg:#f2f2f1;--card:#fff;--text:#1d1d1b;--muted:#6b6b66;--accent:#d99a0b;--border:#d9d9d4;--yellow:#f0b92b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -126,12 +142,12 @@ body.wom #list.doc .box{touch-action:none;cursor:crosshair;user-select:none}
         <button class="btn" id="viewmode">Document view</button>
         <button class="btn" id="wobtn">Whiteout</button>
         <span class="sep" id="sep2" hidden></span>
-        <select id="size" hidden><option value="fit">Images: page fits image</option><option value="a4">Images: A4 page</option><option value="long">Images: Legal 8.5 × 13 in</option></select>
+        <select id="size" hidden><option value="fit">Paper: original (blank = A4)</option><option value="a4">Paper: A4</option><option value="letter">Paper: Letter 8.5 × 11 in</option><option value="long">Paper: Legal 8.5 × 13 in</option><option value="a3">Paper: A3</option><option value="a5">Paper: A5</option></select>
         <select id="place" hidden><option value="mc">Place: Center</option><option value="tl">Top left</option><option value="tc">Top center</option><option value="tr">Top right</option><option value="ml">Middle left</option><option value="mr">Middle right</option><option value="bl">Bottom left</option><option value="bc">Bottom center</option><option value="br">Bottom right</option></select>
       </div>
     </div>
     <div class="right"><button class="btn" id="newbtn" hidden>New</button><nav><a href="#about" data-v="about">ABOUT US</a></nav></div></div>
-    <div id="wordp" hidden><select id="wmode"><option value="text">Editable text</option><option value="img">Pages as images</option></select><input id="wranges" placeholder="All pages, or 1-2, 5" autocomplete="off"><button class="go" id="wordgo">Download Word</button><span id="wmsg"></span></div>
+    <div id="wordp" hidden><select id="wmode"><option value="text">Editable text</option><option value="hybrid">Look-alike (keeps page layout)</option><option value="img">Pages as images</option></select><input id="wranges" placeholder="All pages, or 1-2, 5" autocomplete="off"><button class="go" id="wordgo">Download Word</button><span id="wmsg"></span></div>
     <div id="split" hidden><input id="ranges" placeholder="1-2, 3, 4, 5-6" autocomplete="off"><button class="go" id="splitgo">Download split PDFs</button><span id="smsg"></span></div>
   </header>
   <section id="hero">
@@ -179,10 +195,10 @@ drop.ondragleave=()=>drop.classList.remove('over');
 drop.ondrop=async e=>{e.preventDefault();drop.classList.remove('over');await addFiles([...e.dataTransfer.files])};
 const pickFiles=()=>file.click();
 const addBlank=()=>{pages.push({kind:'blank'});render()};
-// image size/placement only matter when there are JPEG pages
+// paper size applies to every page; placement to PDF and JPEG pages
 function syncOpts(){
-  const im=pages.some(p=>p.kind==='img');
-  $('size').hidden=!im;$('sep2').hidden=!im;$('place').hidden=!im||$('size').value==='fit';
+  const any=pages.length>0,vis=pages.some(p=>p.kind!=='blank');
+  $('size').hidden=!any;$('sep2').hidden=!any;$('place').hidden=!vis||$('size').value==='fit';
 }
 $('size').onchange=syncOpts;
 function mkTile(tag,label,fn,drop){
@@ -482,13 +498,28 @@ async function build(list=pages){
   const {PDFDocument,degrees}=PDFLib;
   const out=await PDFDocument.create();
   const sz=$('size').value,pl=$('place').value;
-  const fmt=sz==='long'?[612,936]:[595.28,841.89];
+  const SIZES={a4:[595.28,841.89],a3:[841.89,1190.55],a5:[419.53,595.28],letter:[612,792],long:[612,936]};
+  const fmt=SIZES[sz]||SIZES.a4;
   for(const p of list){
     if(p.kind==='pdf'){
       const [pg]=await out.copyPages(p.src.doc,[p.idx]);
       if(p.rot)pg.setRotation(degrees((pg.getRotation().angle+p.rot)%360));
       out.addPage(pg);
       if(p.wo&&p.wo.length)whiteRects(pg,p);
+      if(sz!=='fit'){
+        // resize: draw the finished page onto a new sheet of the chosen size (landscape pages get a landscape sheet), then drop the original
+        const R=((pg.getRotation().angle%360)+360)%360;
+        let b;try{b=pg.getCropBox()}catch(e){b=pg.getMediaBox()}
+        const emb=await out.embedPage(pg,{left:b.x,bottom:b.y,right:b.x+b.width,top:b.y+b.height});
+        out.removePage(out.getPageCount()-1);
+        const turn=R===90||R===270,dw=turn?b.height:b.width,dh=turn?b.width:b.height;
+        const [fw,fh]=fmt,[pw,ph]=dw>dh?[fh,fw]:[fw,fh];
+        const s=Math.min(pw/dw,ph/dh),w=dw*s,h=dh*s,uw=b.width*s,uh=b.height*s;
+        const x0=pl[1]==='l'?0:pl[1]==='r'?pw-w:(pw-w)/2;
+        const y0=pl[0]==='t'?ph-h:pl[0]==='b'?0:(ph-h)/2;
+        const ox=R===180?uw:R===270?uh:0,oy=R===90?uw:R===180?uh:0;
+        out.addPage([pw,ph]).drawPage(emb,{x:x0+ox,y:y0+oy,width:uw,height:uh,rotate:degrees(-R)});
+      }
     }else if(p.kind==='blank'){
       out.addPage(fmt);
     }else{
@@ -534,15 +565,15 @@ $('splitbtn').onclick=()=>{const s=$('split');s.hidden=!s.hidden;if(!s.hidden){$
 $('wordbtn').onclick=()=>{const w=$('wordp');w.hidden=!w.hidden;if(!w.hidden){$('split').hidden=true;refreshWord()}};
 // tells the user which pages have real text (editable) and which look scanned
 async function refreshWord(){
-  const wm=$('wmsg'),opt=$('wmode').querySelector('[value=text]');
+  const wm=$('wmsg'),opts=$('wmode').querySelectorAll('[value=text],[value=hybrid]');
   wm.textContent='Checking text…';
   let t=0,other=0;
   for(const p of pages){if(p.kind==='blank')continue;if(await pdfHasText(p))t++;else other++}
   if(!t){
-    opt.disabled=true;$('wmode').value='img';
+    opts.forEach(o=>o.disabled=true);$('wmode').value='img';
     wm.textContent='No text found, so these pages look scanned. Only “Pages as images” is available.';
   }else{
-    opt.disabled=false;
+    opts.forEach(o=>o.disabled=false);
     wm.textContent=t+' page'+(t>1?'s have':' has')+' text.'+(other?' The other '+other+' will be placed as images.':'');
   }
 }
@@ -673,15 +704,39 @@ function wImg(rid,id,W,H,sect){
   const cx=Math.round(W*12700),cy=Math.round(H*12700);
   return '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/><w:jc w:val="center"/>'+(sect||'')+'</w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="'+cx+'" cy="'+cy+'"/><wp:docPr id="'+id+'" name="Page '+id+'"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="'+id+'" name="page'+id+'.jpg"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="'+rid+'"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+cx+'" cy="'+cy+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>';
 }
-// parts: [{type:'text',W,H,paras,m} | {type:'img',W,H,url} | {type:'blank',W,H}], one Word section (page size) each
+// look-alike pieces: one absolutely placed frame per text line, and the page picture anchored behind the text
+function wFrame(l,W,hide){
+  const x=wClamp(l.x,0,W-12),w=Math.max(12,Math.min(Math.max(l.w*1.25,l.fs*3),W-x)),top=Math.max(0,l.y-l.fs*.95),h=wClamp(Math.round(l.fs*2),2,400);
+  const sz='<w:sz w:val="'+h+'"/><w:szCs w:val="'+h+'"/>';
+  let runs;
+  if(hide){
+    runs='<w:r><w:rPr>'+sz+'<w14:textFill><w14:solidFill><w14:srgbClr w14:val="000000"><w14:alpha w14:val="0"/></w14:srgbClr></w14:solidFill></w14:textFill></w:rPr><w:t xml:space="preserve">'+wEsc(l.text)+'</w:t></w:r>';
+  }else{
+    const base=(l.font?'<w:rFonts w:ascii="'+l.font+'" w:hAnsi="'+l.font+'" w:cs="'+l.font+'"/>':'');
+    const tail='<w:color w:val="'+(l.color||'000000')+'"/>'+(l.sp?'<w:spacing w:val="'+l.sp+'"/>':'')+sz;
+    runs=(l.runs||[{t:l.text}]).map(q=>'<w:r><w:rPr>'+base+(q.b?'<w:b/><w:bCs/>':'')+(q.i?'<w:i/><w:iCs/>':'')+tail+'</w:rPr><w:t xml:space="preserve">'+wEsc(q.t)+'</w:t></w:r>').join('');
+  }
+  return '<w:p><w:pPr><w:framePr w:w="'+wTw(w)+'" w:h="'+wTw(l.fs*1.35)+'" w:hRule="exact" w:wrap="around" w:vAnchor="page" w:hAnchor="page" w:x="'+wTw(x)+'" w:y="'+wTw(top)+'"/><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/></w:pPr>'+runs+'</w:p>';
+}
+function wImgBack(rid,id,W,H,sect){
+  const cx=Math.round(W*12700),cy=Math.round(H*12700);
+  return '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/>'+(sect||'')+'</w:pPr><w:r><w:rPr><w:sz w:val="2"/></w:rPr><w:drawing><wp:anchor distT="0" distB="0" distL="0" distR="0" simplePos="0" relativeHeight="'+id+'" behindDoc="1" locked="0" layoutInCell="1" allowOverlap="1"><wp:simplePos x="0" y="0"/><wp:positionH relativeFrom="page"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom="page"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx="'+cx+'" cy="'+cy+'"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:wrapNone/><wp:docPr id="'+id+'" name="Page '+id+'"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="'+id+'" name="page'+id+'.jpg"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="'+rid+'"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+cx+'" cy="'+cy+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r></w:p>';
+}
+// parts: [{type:'hybrid',W,H,url,lines} | {type:'text',W,H,paras,m} | {type:'img',W,H,url} | {type:'blank',W,H}], one Word section (page size) each
 function makeDocx(parts){
   const zip=new JSZip(),rels=[];let body='',img=0;
   parts.forEach((pt,i)=>{
     const last=i===parts.length-1;
-    const m=pt.type==='text'?pt.m:pt.type==='img'?{l:0,r:0,t:0,b:0}:{l:72,r:72,t:72,b:72};
+    const m=pt.type==='text'?pt.m:(pt.type==='img'||pt.type==='hybrid')?{l:0,r:0,t:0,b:0}:{l:72,r:72,t:72,b:72};
     const sect=wSect(pt.W,pt.H,m);
     const tail=last?'':sect;
-    if(pt.type==='img'){
+    if(pt.type==='hybrid'){
+      img++;const rid='rId'+(img+1),name='image'+img+'.jpg';
+      zip.file('word/media/'+name,wBytes(pt.url));
+      rels.push('<Relationship Id="'+rid+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/'+name+'"/>');
+      pt.lines.forEach(l=>{body+=wFrame(l,pt.W,pt.hide)});
+      body+=wImgBack(rid,img,pt.W,pt.H,tail);
+    }else if(pt.type==='img'){
       img++;const rid='rId'+(img+1),name='image'+img+'.jpg';
       zip.file('word/media/'+name,wBytes(pt.url));
       rels.push('<Relationship Id="'+rid+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/'+name+'"/>');
@@ -692,7 +747,7 @@ function makeDocx(parts){
     }
     if(last)body+=sect;
   });
-  const W='xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"';
+  const W='xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" mc:Ignorable="w14"';
   const X='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
   zip.file('[Content_Types].xml',X+'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpg" ContentType="image/jpeg"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>');
   zip.file('_rels/.rels',X+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
@@ -713,39 +768,109 @@ async function pdfHasText(p){
   }catch(e){p.hasText=false}
   return p.hasText;
 }
-async function pageText(p){
+async function pageItems(p){
   const pg=await p.src.pj.getPage(p.idx+1);
   const rotation=(((pg.rotate||0)+p.rot)%360+360)%360;
   const vp=pg.getViewport({scale:1,rotation});
-  const tc=await pg.getTextContent(),items=[];
+  const tc=await pg.getTextContent(),items=[],fm={};
+  // bold/italic from the font itself (needs the page to have been drawn once, so the fonts are loaded)
+  const fstyle=n=>{
+    if(fm[n])return fm[n];
+    const r={b:false,i:false};
+    try{const f=pg.commonObjs.has(n)?pg.commonObjs.get(n):null;
+      if(f){const nm=String(f.name||f.fallbackName||'');r.b=!!f.bold||/bold|black|heavy|demi/i.test(nm);r.i=!!f.italic||/italic|oblique/i.test(nm)}}catch(e){}
+    return fm[n]=r;
+  };
   for(const it of tc.items){
     if(typeof it.str!=='string'||!it.str.length)continue;
     const t=it.transform,fs=Math.hypot(t[0],t[1]);
     const [x,y]=vp.convertToViewportPoint(t[4],t[5]);
     const cx=(x+(it.width||0)/2)/vp.width,cy=(y-fs*.3)/vp.height;
     if((p.wo||[]).some(r=>cx>=r.x&&cx<=r.x+r.w&&cy>=r.y&&cy<=r.y+r.h))continue; // text under a whiteout box is left out
-    items.push({s:it.str,x,y,w:it.width||0,fs});
+    items.push({s:it.str,x,y,w:it.width||0,fs,ff:((tc.styles||{})[it.fontName]||{}).fontFamily||'',b:fstyle(it.fontName).b,i:fstyle(it.fontName).i});
   }
-  return {W:vp.width,H:vp.height,...groupText(items,vp.width,vp.height)};
+  return {W:vp.width,H:vp.height,items};
+}
+async function pageText(p){
+  const {W,H,items}=await pageItems(p);
+  return {W,H,...groupText(items,W,H)};
+}
+// text lines with exact positions (top-down, pt), for the look-alike mode; wide gaps start a new line box
+function hLines(items,k){
+  items=items.filter(i=>i.s.trim().length&&i.fs>0).map(i=>({s:i.s,x:i.x*k,y:i.y*k,w:i.w*k,fs:i.fs*k,ff:i.ff||'',b:!!i.b,i:!!i.i})).sort((a,b)=>a.y-b.y||a.x-b.x);
+  const rows=[];
+  for(const it of items){
+    const r=rows[rows.length-1];
+    if(r&&Math.abs(it.y-r.y)<Math.max(r.fs,it.fs)*.45){r.items.push(it);r.fs=Math.max(r.fs,it.fs)}
+    else rows.push({y:it.y,fs:it.fs,items:[it]});
+  }
+  const out=[];
+  for(const r of rows){
+    r.items.sort((a,b)=>a.x-b.x);
+    let seg=null,prev=null;
+    for(const it of r.items){
+      const gap=prev?it.x-(prev.x+prev.w):0;
+      const add=(t,b,i)=>{const q=seg.runs[seg.runs.length-1];if(q&&q.b===b&&q.i===i)q.t+=t;else seg.runs.push({t,b,i});seg.text+=t};
+      if(!seg||gap>r.fs*2.5){seg={text:'',runs:[],x:it.x,y:r.y,w:it.w,fs:r.fs,ff:it.ff};out.push(seg);add(it.s,it.b,it.i)}
+      else{
+        if(gap>r.fs*.12&&!/\s$/.test(seg.text)&&!/^\s/.test(it.s)){const q=seg.runs[seg.runs.length-1];add(' ',q.b,q.i)}
+        add(it.s,it.b,it.i);seg.w=it.x+it.w-seg.x;
+      }
+      prev=it;
+    }
+  }
+  return out.filter(l=>l.text.trim());
+}
+// look-alike page: the page picture (text taken out) behind, the real text on top in its own spot, color and font family
+const hFamily=ff=>/mono/i.test(ff)?'Courier New':/serif/i.test(ff)&&!/sans/i.test(ff)?'Times New Roman':'Arial';
+async function pageHybrid(p){
+  const full=await pageJpeg(p),t=await pageItems(p),k=full.W/t.W,lines=hLines(t.items,k);
+  let bare=null;
+  try{bare=await pageJpeg(p,true)}catch(e){}
+  const mc=document.createElement('canvas').getContext('2d');
+  let hit=0;
+  if(bare&&bare.cv&&full.cv){
+    const sc=full.cv.width/full.W,fx=full.cv.getContext('2d'),bx=bare.cv.getContext('2d');
+    for(const l of lines){
+      const x0=Math.max(0,Math.floor(l.x*sc)),y0=Math.max(0,Math.floor((l.y-l.fs*.85)*sc));
+      const w=Math.min(full.cv.width-x0,Math.ceil(l.w*sc)),h=Math.min(full.cv.height-y0,Math.ceil(l.fs*1.1*sc));
+      if(w<1||h<1)continue;
+      const A=fx.getImageData(x0,y0,w,h).data,B=bx.getImageData(x0,y0,w,h).data;
+      let best=0,bi=-1;
+      for(let i=0;i<A.length;i+=4){const d=Math.abs(A[i]-B[i])+Math.abs(A[i+1]-B[i+1])+Math.abs(A[i+2]-B[i+2]);if(d>best){best=d;bi=i}}
+      if(best>90){hit++;l.color=[A[bi],A[bi+1],A[bi+2]].map(v=>v.toString(16).padStart(2,'0')).join('')}
+    }
+  }
+  // text really removed from the picture: show real text. Otherwise keep the full picture and hide the text on top.
+  const clean=lines.length&&hit/lines.length>=.6;
+  for(const l of lines){
+    l.font=hFamily(l.ff);
+    let mw=0;
+    for(const q of l.runs){mc.font=(q.i?'italic ':'')+(q.b?'bold ':'')+l.fs+'px "'+l.font+'"';mw+=mc.measureText(q.t).width}
+    const n=[...l.text].length,sp=n>1?Math.round((l.w-mw)/(n-1)*20):0;
+    l.sp=wClamp(sp,-60,60);
+  }
+  return {type:'hybrid',url:clean?bare.url:full.url,W:full.W,H:full.H,lines,hide:!clean};
 }
 // one page as a picture (rotation and whiteout boxes included)
-async function pageJpeg(p){
-  let url,W,H;
+async function pageJpeg(p,noText){
+  let url,W,H,cv;
   if(p.kind==='pdf'){
     const pg=await p.src.pj.getPage(p.idx+1);
     const rotation=(((pg.rotate||0)+p.rot)%360+360)%360;
     const v=pg.getViewport({scale:1,rotation}),vp=pg.getViewport({scale:1400/v.width,rotation});
     const c=document.createElement('canvas');c.width=Math.round(vp.width);c.height=Math.round(vp.height);
     const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);
+    if(noText){x.fillText=()=>{};x.strokeText=()=>{}} // pdf.js draws page text with these two calls
     await pg.render({canvasContext:x,viewport:vp}).promise;
     x.fillStyle='#fff';for(const r of p.wo||[])x.fillRect(r.x*c.width,r.y*c.height,r.w*c.width,r.h*c.height);
-    url=c.toDataURL('image/jpeg',.9);W=v.width;H=v.height;
+    url=c.toDataURL('image/jpeg',.9);cv=c;W=v.width;H=v.height;
     const k=Math.min(1,1500/Math.max(W,H));W*=k;H*=k;
   }else{
     url=await flatImg(p);
     const k=842/Math.max(p.w,p.h);W=p.w*k;H=p.h*k;
   }
-  return {type:'img',url,W,H};
+  return {type:'img',url,W,H,cv};
 }
 async function convertWord(mode,idxList,progress){
   const parts=[];let n=0;
@@ -753,6 +878,7 @@ async function convertWord(mode,idxList,progress){
     const p=pages[k];progress(++n,idxList.length);
     if(p.kind==='blank'){parts.push({type:'blank',W:595.28,H:841.89});continue}
     if(mode==='text'&&await pdfHasText(p)){parts.push({type:'text',...await pageText(p)});continue}
+    if(mode==='hybrid'&&await pdfHasText(p)){parts.push(await pageHybrid(p));continue}
     if(p.kind==='pdf'&&!p.src.pj)throw new Error('Page '+(k+1)+' can’t be drawn in this browser.');
     parts.push(await pageJpeg(p));
     await new Promise(r=>setTimeout(r));
