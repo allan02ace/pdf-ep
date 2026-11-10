@@ -25,7 +25,7 @@
 <meta name="twitter:title" content="pdf-ep | Less fuss. More PDF.">
 <meta name="twitter:description" content="Merge, edit, annotate, resize and split PDFs, convert pictures to PDF, and export to Word.">
 <meta name="twitter:image" content="https://allan02ace.github.io/pdf-ep/preview.jpg">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;800&display=swap">
+<style>@font-face{font-family:Montserrat;font-weight:500;font-style:normal;font-display:swap;src:url(vendor/fonts/montserrat-500.woff2) format("woff2")}@font-face{font-family:Montserrat;font-weight:800;font-style:normal;font-display:swap;src:url(vendor/fonts/montserrat-800.woff2) format("woff2")}</style>
 <style>
 :root{--bg:#f2f2f1;--card:#fff;--text:#1d1d1b;--muted:#6b6b66;--accent:#d99a0b;--border:#d9d9d4;--yellow:#f0b92b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141414;--card:#222;--text:#f1f1ee;--muted:#9a9a94;--accent:#f0b92b;--border:#3a3a38}}
@@ -216,11 +216,13 @@ body.anm .ai.n .ic{cursor:pointer}
     <div id="msg"></div>
   </section>
 </div>
-<script>window.libMiss=[];function libFail(n){libMiss.push(n)}</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js" onerror="libFail('pdf-lib')"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" onerror="libFail('pdf.js')"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js" onerror="libFail('pdf.js')"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" onerror="libFail('JSZip')"></script>
+<script>window.libMiss=[];function libFail(n){libMiss.push(n)}
+// offline support: sw.js saves the page, libraries and font on the first visit (GitHub Pages / https only)
+if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
+<script src="vendor/pdf-lib.min.js" integrity="sha384-weMABwrltA6jWR8DDe9Jp5blk+tZQh7ugpCsF3JwSA53WZM9/14PjS5LAJNHNjAI" crossorigin="anonymous" onerror="libFail('pdf-lib')"></script>
+<script src="vendor/pdf.min.js" integrity="sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e" crossorigin="anonymous" onerror="libFail('pdf.js')"></script>
+<script src="vendor/pdf.worker.min.js" integrity="sha384-SnzOobpRMLXZ52iJvZm/C0fYw0OQemTXzTjIsdsfMcrCtCEe9qgzxTd3RSklO5x2" crossorigin="anonymous" onerror="libFail('pdf.js')"></script>
+<script src="vendor/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous" onerror="libFail('JSZip')"></script>
 <script>
 // Save a file: Claude artifact 'downloads' capability if present, otherwise a normal browser download (GitHub Pages, local file, any host).
 async function saveFile(filename,data){
@@ -237,7 +239,7 @@ const pages=[];
 const sig=()=>pages.map(p=>(p.name||'blank')+'|'+(p.idx??'')+'|'+(p.rot||0)+'|'+(p.url?p.url.length:'')+'|'+JSON.stringify(p.wo||[])+'|'+JSON.stringify(p.an||[])).join('~');
 let savedSig='';
 const list=$('list'),go=$('go'),msg=$('msg'),file=$('file'),drop=$('drop');
-if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='vendor/pdf.worker.min.js';
 
 let mode='';
 
