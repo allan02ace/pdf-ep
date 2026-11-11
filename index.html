@@ -71,8 +71,28 @@ body.has .lp::before{width:1.7em;height:1.7em}
 nav{display:flex;gap:26px}
 nav a{color:var(--text);text-decoration:none;font-size:.8rem;letter-spacing:.04em;font-weight:500;transition:color .3s}
 nav a:hover,nav a.on{color:var(--accent)}
-#libwarn{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:6px 0;padding:10px 14px;border:1px solid var(--accent);border-radius:12px;background:var(--card);font-size:.85rem;line-height:1.4}
-#libwarn .btn{padding:6px 14px;font-size:.78rem;flex:none}
+#libwarn,#errwarn{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:6px 0;padding:10px 14px;border:1px solid var(--accent);border-radius:12px;background:var(--card);font-size:.85rem;line-height:1.4}
+#libwarn .btn,#errwarn .btn{padding:6px 14px;font-size:.78rem;flex:none}
+#errwarn{position:sticky;top:calc(env(safe-area-inset-top,0px) + 72px);z-index:30}
+#errtxt{white-space:pre-line;overflow-wrap:anywhere}
+#ld,#er{display:none;position:absolute;inset:0;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+#drop.ld #ld,#drop.er #er{display:flex}
+#drop.ld #add,#drop.er #add{display:none}
+#ld{gap:4px}
+#ld svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+#ld circle{fill:none;stroke-width:4.5}
+#ld .trk{stroke:#fff1c2}
+#ld .arc{stroke:url(#ldstr);stroke-linecap:butt}
+#ldp{position:relative;font-size:clamp(1.3rem,5vw,1.9rem);font-weight:800;line-height:1}
+#ldt{position:relative;font-size:.85rem;opacity:.75;max-width:60%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#er{gap:10px;text-align:center;padding:0 24% 0 10%}
+@media (max-width:720px){#er{padding:0 12%}}
+#ert{font-weight:800;font-size:clamp(1.3rem,5vw,1.9rem);line-height:1.1}
+#erl{font-size:.85rem;opacity:.8;white-space:pre-line;overflow-wrap:anywhere;line-height:1.4}
+.addt .mini{width:34px;height:34px}
+.addt .mini circle{fill:none;stroke:currentColor;stroke-width:3}
+.addt .mini .trk{opacity:.2}
+.addt .mini .arc{stroke-linecap:round}
 #hero{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 140px);padding:10px 0 30px}
 #drop{width:min(80vw,430px);aspect-ratio:1;border-radius:50%;background:var(--yellow);color:#1d1d1b;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;flex:none;transition:background .15s}
 #drop.over{background:#f5c64a}
@@ -195,14 +215,15 @@ body.anm .ai.n .ic{cursor:pointer}
         <select id="place" hidden><option value="mc">Place: Center</option><option value="tl">Top left</option><option value="tc">Top center</option><option value="tr">Top right</option><option value="ml">Middle left</option><option value="mr">Middle right</option><option value="bl">Bottom left</option><option value="bc">Bottom center</option><option value="br">Bottom right</option></select>
       </div>
     </div>
-    <div class="right"><button class="btn" id="newbtn" hidden>New</button><nav><a href="#editor" data-v="editor">HOME</a><a href="#about" data-v="about">ABOUT US</a></nav></div></div>
+    <div class="right"><button class="btn" id="newbtn" hidden title="New (Ctrl+N or Alt+N), then Ctrl+D or Alt+D to discard">New</button><nav><a href="#editor" data-v="editor">HOME</a><a href="#about" data-v="about">ABOUT US</a></nav></div></div>
     <div id="wordp" hidden><select id="wmode"><option value="text">Editable text</option><option value="hybrid">Look-alike (keeps page layout)</option><option value="img">Pages as images</option></select><input id="wranges" placeholder="All pages, or 1-2, 5" autocomplete="off"><button class="go" id="wordgo">Download Word</button><span id="wmsg"></span></div>
     <div id="split" hidden><input id="ranges" placeholder="1-2, 3, 4, 5-6" autocomplete="off"><button class="go" id="splitgo">Download split PDFs</button><span id="smsg"></span></div>
     <div id="markp" hidden><button class="btn on" data-t="hl">Highlight</button><button class="btn" data-t="ul">Underline</button><button class="btn" data-t="st">Strikethrough</button><button class="btn" data-t="free">Draw</button><button class="btn" data-t="txt">Text</button><button class="btn" data-t="cmt">Comment</button><button class="btn" data-t="note">Sticky note</button><span class="sep"></span><span id="sw"></span><span id="mtx" hidden><select id="mfont"><option value="sans">Sans</option><option value="serif">Serif</option><option value="mono">Mono</option></select><input id="msize" type="number" min="6" max="144" value="14" title="Size (pt)"><button class="btn" id="mb"><b>B</b></button><button class="btn" id="mi"><i>I</i></button></span><button class="btn" id="mundo">Undo</button></div>
   </header>
   <div id="libwarn" role="alert" hidden><span id="libtxt"></span><button class="btn" id="libreload">Reload</button></div>
+  <div id="errwarn" role="alert" hidden><span id="errtxt"></span><button class="btn" id="errx">Close</button></div>
   <section id="hero">
-    <div id="drop"><span class="opt">picture to pdf</span><span class="opt">merge pdf</span><span class="opt">delete pdf</span><div id="add" hidden><div class="plus">+</div><small>.pdf · .jpg · .jpeg · .jfif</small></div><svg id="sil" viewBox="0 0 100 100" aria-hidden="true"><defs><clipPath id="silc"><circle cx="50" cy="50" r="50"/></clipPath><clipPath id="silo"><path id="silop" clip-rule="evenodd" d=""/></clipPath><path id="silp" d=""/></defs><g clip-path="url(#silo)"><g class="sg"><use href="#silp" style="fill:var(--text)"/></g></g><g clip-path="url(#silc)"><g class="sg"><use href="#silp" fill="#1d1d1b"/></g></g></svg></div>
+    <div id="drop"><span class="opt">picture to pdf</span><span class="opt">merge pdf</span><span class="opt">delete pdf</span><div id="add" hidden><div class="plus">+</div><small>.pdf · .jpg · .jpeg · .jfif</small></div><div id="ld"><svg viewBox="0 0 100 100" aria-hidden="true"><defs><pattern id="ldstr" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(135)"><g><animateTransform attributeName="transform" type="translate" from="0 0" to="5 0" dur=".5s" repeatCount="indefinite"/><rect x="-5" width="15" height="5" fill="#f0b92b"/><rect x="-5" width="2.5" height="5" fill="#fff"/><rect x="0" width="2.5" height="5" fill="#fff"/><rect x="5" width="2.5" height="5" fill="#fff"/></g></pattern><mask id="ldmask" maskUnits="userSpaceOnUse" x="-10" y="-10" width="120" height="120"><rect x="-10" y="-10" width="120" height="120" fill="#fff"/><rect id="ldcut" fill="#000" width="0" height="0"/></mask></defs><g mask="url(#ldmask)"><circle class="trk" cx="50" cy="50" r="54"/><circle class="arc" id="ldarc" cx="50" cy="50" r="54" pathLength="100" stroke-dasharray="0 100" transform="rotate(-90 50 50)"/></g></svg><b id="ldp">0%</b><small id="ldt"></small></div><div id="er" role="alert"><b id="ert"></b><small id="erl"></small></div><svg id="sil" viewBox="0 0 100 100" aria-hidden="true"><defs><clipPath id="silc"><circle cx="50" cy="50" r="50"/></clipPath><clipPath id="silo"><path id="silop" clip-rule="evenodd" d=""/></clipPath><path id="silp" d=""/></defs><g clip-path="url(#silo)"><g class="sg"><use href="#silp" style="fill:var(--text)"/></g></g><g clip-path="url(#silc)"><g class="sg"><use href="#silp" fill="#1d1d1b"/></g></g></svg></div>
     <h2 id="big"><span id="b1">less fuss.</span><span id="b2">more pdf.</span><span id="b3" hidden></span></h2>
   </section>
   <section id="aboutv" hidden>
@@ -258,7 +279,11 @@ $('size').onchange=syncOpts;
 function mkTile(tag,label,fn,drop){
   const t=document.createElement(tag);t.className=(tag==='li'?'':'sth ')+'addt';
   t.tabIndex=0;t.setAttribute('role','button');t.setAttribute('aria-label',label);
-  t.innerHTML='<span class="plus">+</span><small></small>';t.querySelector('small').textContent=label;
+  if(fn===pickFiles&&load){
+    t.dataset.ld='1';
+    t.innerHTML='<svg class="mini" viewBox="0 0 36 36" aria-hidden="true"><circle class="trk" cx="18" cy="18" r="15"/><circle class="arc" cx="18" cy="18" r="15" pathLength="100" stroke-dasharray="'+Math.round(load.fr*100)+' 100" transform="rotate(-90 18 18)"/></svg><small>'+Math.round(load.fr*100)+'%</small>';
+  }else{t.innerHTML='<span class="plus">+</span><small></small>';t.querySelector('small').textContent=label}
+  if(fn===pickFiles)t.title='Open files (Ctrl+O)';
   t.onclick=fn;t.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();fn()}};
   if(drop){
     t.ondragover=e=>{e.preventDefault();t.classList.add('over')};
@@ -271,35 +296,124 @@ function mkTile(tag,label,fn,drop){
 const readURL=f=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)});
 const loadImg=u=>new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=u});
 
-async function addFiles(files){
+// ---- loading ring (in the home circle, or on the add tile once pages are open) and clear error messages ----
+let load=null,errT=0,ldShown=0,ldRaf=0,ldT=0;
+const shortName=n=>n.length>28?n.slice(0,14)+'…'+n.slice(-11):n;
+// load.fr is the real progress (it jumps); ldShown is what is drawn: it glides toward it, creeps a little while a big step is being worked on, and never goes back
+function loadSet(fr,name,i,n){
+  if(!load){ldShown=0;ldT=performance.now()}
+  load={fr:Math.min(1,Math.max(fr,load?load.fr:0)),name,i,n};
+  paintLoad();
+  if(!ldRaf)ldRaf=requestAnimationFrame(ldFrame);
+}
+function loadEnd(){load=null;paintLoad()}
+function ldFrame(now){
+  ldRaf=0;
+  if(!load)return;
+  const dt=Math.min(.1,Math.max(0,(now-ldT)/1000)),t=load.fr,fin=t>=1;ldT=now;
+  if(ldShown<t){ldShown+=(t-ldShown)*(1-Math.exp(-dt*(fin?14:3.5)));if(t-ldShown<.0004)ldShown=t}
+  else if(!fin)ldShown=Math.min(t+.04,.985,ldShown+dt*.015);
+  paintLoad();
+  ldRaf=requestAnimationFrame(ldFrame);
+}
+// let the ring reach 100% before the home circle moves on
+async function loadDone(){
+  if(!load||!drop.classList.contains('ld'))return;
+  load.fr=1;
+  const t0=performance.now();
+  while(ldShown<.985&&performance.now()-t0<450)await new Promise(r=>setTimeout(r,30));
+  ldShown=1;paintLoad();
+  await new Promise(r=>setTimeout(r,90));
+}
+// the ring is cut away where the headline overlaps the circle, so it never runs under the words
+function ringCut(){
+  const c=$('ldcut'),d=drop.getBoundingClientRect(),b=$('big').getBoundingClientRect();
+  if(!c||!d.width||!b.width){if(c){c.setAttribute('width',0);c.setAttribute('height',0)}return}
+  const u=100/d.width,pad=2.5,x0=(b.left-d.left)*u-pad,y0=(b.top-d.top)*u-pad;
+  c.setAttribute('x',x0.toFixed(2));c.setAttribute('y',y0.toFixed(2));
+  c.setAttribute('width',Math.max(0,b.width*u+2*pad).toFixed(2));c.setAttribute('height',Math.max(0,b.height*u+2*pad).toFixed(2));
+}
+function paintLoad(){
+  const home=!$('hero').hidden&&location.hash!=='#about',sh=load?ldShown:0,pct=Math.round(sh*100),dash=(sh*100).toFixed(2)+' 100';
+  drop.classList.toggle('ld',!!load&&home);
+  if(load){
+    $('ldp').textContent=pct+'%';
+    $('ldt').textContent=(load.n>1?load.i+' of '+load.n+' · ':'')+shortName(load.name);
+    $('ldarc').setAttribute('stroke-dasharray',dash);
+    if(home)ringCut();
+  }
+  document.querySelectorAll('.addt[data-ld]').forEach(t=>{t.querySelector('.arc').setAttribute('stroke-dasharray',dash);t.querySelector('small').textContent=pct+'%'});
+}
+if(matchMedia('(prefers-reduced-motion:reduce)').matches)document.querySelectorAll('#ld animateTransform').forEach(a=>a.remove());
+// errs = [{name, why}]. Home screen: shown inside the circle. Pages open: a notice bar that stays until closed.
+function showErr(errs){
+  clearErr();
+  if(!errs.length)return;
+  const title=errs.length===1?'Can’t open this file':'Can’t open '+errs.length+' files';
+  const lines=errs.slice(0,3).map(e=>shortName(e.name)+': '+e.why);
+  if(errs.length>3)lines.push('+ '+(errs.length-3)+' more');
+  const home=!$('hero').hidden&&location.hash!=='#about'&&!pages.length;
+  if(home){$('ert').textContent=title;$('erl').textContent=lines.join('\n');drop.classList.add('er')}
+  else{$('errtxt').textContent=title+'\n'+lines.join('\n');$('errwarn').hidden=false}
+  errT=setTimeout(clearErr,home?9000:15000);
+}
+function clearErr(){clearTimeout(errT);errT=0;drop.classList.remove('er');$('errwarn').hidden=true}
+$('errx').onclick=clearErr;
+const bad=why=>({why});
+const pdfWhy=e=>/encrypt|password/i.test((e&&(e.name+' '+e.message))||'')?'is protected by a password or editing restrictions.':'is damaged or isn’t a valid PDF.';
+// one batch at a time, so progress and messages never mix
+let addQ=Promise.resolve();
+const addFiles=files=>addQ=addQ.then(()=>addFilesNow(files)).catch(()=>{loadEnd();render()});
+async function addFilesNow(files){
   if(!window.PDFLib){libCheck();return}
+  clearErr();
   // natural filename order within each batch (img2 before img10)
   files=[...files].sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true,sensitivity:'base'}));
-  for(const f of files){
+  if(!files.length)return;
+  const N=files.length,errs=[],defer=!pages.length; // from the home screen, the circle stays until everything is read
+  for(let fi=0;fi<N;fi++){
+    const f=files[fi],step=fr=>loadSet((fi+fr)/N,f.name,fi+1,N);
+    step(0);
     try{
       if(/\.pdf$/i.test(f.name)||f.type==='application/pdf'){
         msg.textContent='Reading '+f.name+'…';
+        if(!f.size)throw bad('is empty.');
         const bytes=new Uint8Array(await f.arrayBuffer());
-        const src={bytes,doc:await PDFLib.PDFDocument.load(bytes,{ignoreEncryption:true})};
-        const n=src.doc.getPageCount();
+        step(.08);
+        let doc;
+        try{doc=await PDFLib.PDFDocument.load(bytes)}catch(e){throw bad(pdfWhy(e))}
+        let n;
+        try{n=doc.getPageCount()}catch(e){throw bad(pdfWhy(e))}
+        if(!n)throw bad('has no pages.');
+        const src={bytes,doc};
         let pj=null;
-        try{pj=await pdfjsLib.getDocument({data:bytes.slice()}).promise}catch(e){}
+        try{pj=await pdfjsLib.getDocument({data:bytes.slice()}).promise}catch(e){if(e&&e.name==='PasswordException')throw bad(pdfWhy(e))}
         src.pj=pj;
+        step(.15);
         for(let i=0;i<n;i++){
           let thumb=null;
           if(pj){try{thumb=await thumbOf(pj,i+1)}catch(e){}}
           pages.push({kind:'pdf',src,idx:i,rot:0,thumb,name:f.name});
-          if(i%5===4)render();
+          step(.15+.85*(i+1)/n);
+          if(i%5===4&&!defer)render();
         }
       }else if(/\.(jpe?g|jfif)$/i.test(f.name)||/jpe?g/i.test(f.type)){
+        if(!f.size)throw bad('is empty.');
         // JFIF files often arrive with a wrong MIME type, so force image/jpeg
         const url='data:image/jpeg;base64,'+(await readURL(f)).split(',')[1];
-        const img=await loadImg(url);
+        step(.5);
+        let img;
+        try{img=await loadImg(url)}catch(e){throw bad('isn’t a valid JPEG image.')}
         pages.push({kind:'img',url,w:img.naturalWidth,h:img.naturalHeight,name:f.name});
-      }else msg.textContent='Skipped '+f.name+' (not a PDF or JPEG/JFIF).';
-    }catch(e){msg.textContent='Could not read '+f.name+'.'}
-    render();
+      }else throw bad('isn’t a PDF or JPEG/JFIF.');
+    }catch(e){errs.push({name:f.name,why:(e&&e.why)||'couldn’t be read.'})}
+    step(1);
+    if(!defer)render();
   }
+  await loadDone();
+  loadEnd();
+  render();
+  showErr(errs);
 }
 
 let bigQ=Promise.resolve();
@@ -618,6 +732,19 @@ function parseRanges(txt,n){
   }
   return out.length?out:'Enter ranges like 1-2, 3, 4, 5-6.';
 }
+// keyboard shortcuts: Ctrl+O open files, Ctrl+N (or Alt+N) New, Ctrl+D (or Alt+D) discard (Cmd on Mac)
+document.addEventListener('keydown',e=>{
+  if(e.defaultPrevented||e.isComposing)return;
+  const mod=e.ctrlKey||e.metaKey,k=e.key.length===1?e.key.toLowerCase():'';
+  if(mod&&!e.shiftKey&&!e.altKey&&k==='o'){e.preventDefault();pickFiles();return}
+  const t=e.target;
+  if(/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)||t.isContentEditable)return;
+  if(!pages.length)return;
+  const isN=(mod&&!e.shiftKey&&!e.altKey&&k==='n')||(e.altKey&&!mod&&!e.shiftKey&&e.code==='KeyN');
+  if(isN){e.preventDefault();if(!newT)$('newbtn').click();return}      // first step: asks "Discard pages?" when there is unsaved work
+  const isD=(mod&&!e.shiftKey&&!e.altKey&&k==='d')||(e.altKey&&!mod&&!e.shiftKey&&e.code==='KeyD');
+  if(isD){e.preventDefault();$('newbtn').click()} // confirms the question (or clears saved work)
+});
 let newT=0;
 $('newbtn').onclick=()=>{
   const b=$('newbtn');
