@@ -9,6 +9,10 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#f0b92b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="pdf-ep">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="description" content="Merge PDFs, turn pictures into PDF, delete, reorder and resize pages, split, highlight and annotate, add text boxes, and export to Word. Runs in your browser. Less fuss, more PDF.">
 
 <meta property="og:type" content="website">
@@ -57,6 +61,15 @@ button#newbtn:hover{background:var(--yellow);color:#1d1d1b}
 .sth.addt small{font-size:.58rem}
 #tools .btn,#tools select{padding:7px 13px;font-size:.78rem}
 #tools .go{min-width:0;flex:none;padding:8px 16px;font-size:.8rem}
+#tools .btn.ic{width:34px;height:34px;padding:0;display:inline-flex;align-items:center;justify-content:center}
+.ic svg,.selw svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+.selw{box-sizing:border-box;position:relative;display:inline-flex;align-items:center;justify-content:center;height:34px;padding:0 13px;border:1px solid var(--border);border-radius:999px;background:var(--card);color:var(--text);font-size:.68rem;font-weight:700;letter-spacing:.08em;cursor:pointer;flex:none}
+.selw.sq{width:34px;padding:0}
+.selw.on{background:var(--yellow);border-color:var(--yellow);color:#1d1d1b}
+#tools .selw select{position:absolute;inset:0;width:100%;height:100%;padding:0;opacity:0;cursor:pointer;border:0}
+.selw:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+#tip{position:fixed;z-index:200;max-width:240px;padding:8px 11px;border-radius:9px;background:var(--text);color:var(--card);font-size:.74rem;line-height:1.35;pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+#tip b{display:block;font-size:.78rem;margin-bottom:2px}
 #split,#wordp{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 0 0}
 #wordp select{font-size:.8rem;padding:8px 14px}
 #split input,#wordp input{font:inherit;font-size:.85rem;padding:8px 14px;border-radius:999px;border:1px solid var(--border);background:var(--card);color:var(--text);flex:1;min-width:180px;max-width:320px}
@@ -195,6 +208,28 @@ body.anm #list.doc .box{touch-action:none;cursor:crosshair;user-select:none}
 body.anm .ai b,body.anm .ai .mv,body.anm .ai .rs,body.anm .ai.t textarea,body.anm .ai.n .ic,body.anm .ai.n textarea{pointer-events:auto}
 body.anm .ai.r b,body.anm .ai.f b,body.anm .ai.n.open .np b,body.anm .ai.t:hover b,body.anm .ai.t:hover .mv,body.anm .ai.t:hover .rs,body.anm .ai.t.sel b,body.anm .ai.t.sel .mv,body.anm .ai.t.sel .rs{display:flex}
 body.anm .ai.n .ic{cursor:pointer}
+button,select,.selw,a,.addt{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+@media (max-width:720px){
+  .bar{flex-wrap:wrap;row-gap:8px}
+  #tools{display:contents}
+  #tools>.sep{display:none}
+  .brand{order:1}
+  #go{order:2;margin-left:auto}
+  .bar>.right{order:3;margin-left:8px}
+  #tmid{order:4;flex:1 0 100%;width:100%;margin:0;padding:2px 0;justify-content:space-between}
+  #work.docmode{grid-template-columns:minmax(0,1fr)}
+  #work.docmode #side{display:none}
+  #errwarn{top:calc(env(safe-area-inset-top,0px) + 116px)}
+}
+@media (pointer:coarse){
+  #tools .btn.ic,.selw{height:40px}
+  #tools .btn.ic,.selw.sq{width:40px}
+  .selw:not(.sq){padding:0 16px}
+  .bot button,.top .grip{min-width:44px;min-height:44px}
+  .top .grip,.bot button{display:inline-flex;align-items:center;justify-content:center}
+  #split input,#wordp input,#wordp select,#markp input,#markp select,#tools select{font-size:16px}
+  #markp .btn,#split .go,#wordp .go{padding:10px 16px}
+}
 </style>
 </head>
 <body>
@@ -205,14 +240,14 @@ body.anm .ai.n .ic{cursor:pointer}
       <button class="go" id="go" disabled>Download PDF</button>
       <span class="sep"></span>
       <div id="tmid">
-        <button class="btn" id="splitbtn">Custom split</button>
-        <button class="btn" id="wordbtn">Word</button>
-        <button class="btn" id="viewmode">Document view</button>
-        <button class="btn" id="mkbtn">Markup</button>
-        <button class="btn" id="wobtn">Whiteout</button>
+        <button class="btn ic" id="splitbtn" data-n="Custom split" data-d="Cut the document into several PDFs by page ranges, like 1-2, 3, 4-6." aria-label="Custom split"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="7" r="3"/><circle cx="6" cy="17" r="3"/><path d="M8.6 8.6L19 19"/><path d="M8.6 15.4L19 5"/></svg></button>
+        <button class="btn ic" id="wordbtn" data-n="Convert to Word" data-d="Export the pages as a .docx file: editable text, a look-alike layout, or page images." aria-label="Convert to Word"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7.5 9l2 6 2.5-4.5 2.5 4.5 2-6"/></svg></button>
+        <button class="btn ic" id="viewmode" data-n="Document view" data-d="Show large pages one under another, like a Word document." aria-label="Document view"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1-2-2v-14a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="M9 13h6"/><path d="M9 17h6"/></svg></button>
+        <button class="btn ic" id="mkbtn" data-n="Markup" data-d="Highlight, underline, strike through, draw, add text, comments and sticky notes." aria-label="Markup"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l10.5-10.5a2.828 2.828 0 1 0-4-4l-10.5 10.5v4"/><path d="M13.5 6.5l4 4"/></svg></button>
+        <button class="btn ic" id="wobtn" data-n="Whiteout" data-d="Draw a box that covers an area with white. Works in Document view." aria-label="Whiteout"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 20h-10.5l-4.21-4.3a1 1 0 0 1 0-1.41l10-10a1 1 0 0 1 1.41 0l5 5a1 1 0 0 1 0 1.41l-9.2 9.3"/><path d="M18 13.3l-6.3-6.3"/></svg></button>
         <span class="sep" id="sep2" hidden></span>
-        <select id="size" hidden><option value="fit">Paper: original (blank = A4)</option><option value="a4">Paper: A4</option><option value="letter">Paper: Letter 8.5 × 11 in</option><option value="long">Paper: Legal 8.5 × 13 in</option><option value="a3">Paper: A3</option><option value="a5">Paper: A5</option></select>
-        <select id="place" hidden><option value="mc">Place: Center</option><option value="tl">Top left</option><option value="tc">Top center</option><option value="tr">Top right</option><option value="ml">Middle left</option><option value="mr">Middle right</option><option value="bl">Bottom left</option><option value="bc">Bottom center</option><option value="br">Bottom right</option></select>
+        <label class="selw" id="sizew" hidden data-n="Paper size" data-d="Resize every page to a paper size. Now: Original."><span>SIZE</span><select id="size" aria-label="Paper size"><option value="fit">Paper: original (blank = A4)</option><option value="a4">Paper: A4</option><option value="letter">Paper: Letter 8.5 × 11 in</option><option value="long">Paper: Legal 8.5 × 13 in</option><option value="a3">Paper: A3</option><option value="a5">Paper: A5</option></select></label>
+        <label class="selw sq" id="placew" hidden data-n="Placement" data-d="Where a page sits on the paper. Now: Center."><svg viewBox="0 0 24 24" aria-hidden="true"><path stroke-width="3" d="M6 6h.01M12 6h.01M18 6h.01M6 12h.01M12 12h.01M18 12h.01M6 18h.01M12 18h.01M18 18h.01"/></svg><select id="place" aria-label="Placement"><option value="mc">Place: Center</option><option value="tl">Top left</option><option value="tc">Top center</option><option value="tr">Top right</option><option value="ml">Middle left</option><option value="mr">Middle right</option><option value="bl">Bottom left</option><option value="bc">Bottom center</option><option value="br">Bottom right</option></select></label>
       </div>
     </div>
     <div class="right"><button class="btn" id="newbtn" hidden title="New (Ctrl+N or Alt+N), then Ctrl+D or Alt+D to discard">New</button><nav><a href="#editor" data-v="editor">HOME</a><a href="#about" data-v="about">ABOUT US</a></nav></div></div>
@@ -273,9 +308,13 @@ const addBlank=()=>{pages.push({kind:'blank'});render()};
 // paper size applies to every page; placement to PDF and JPEG pages
 function syncOpts(){
   const any=pages.length>0,vis=pages.some(p=>p.kind!=='blank');
-  $('size').hidden=!any;$('sep2').hidden=!any;$('place').hidden=!vis||$('size').value==='fit';
+  $('sizew').hidden=!any;$('sep2').hidden=!any;$('placew').hidden=!vis||$('size').value==='fit';
+  const so=$('size').selectedOptions[0],po=$('place').selectedOptions[0];
+  $('sizew').classList.toggle('on',$('size').value!=='fit');
+  $('sizew').dataset.d='Resize every page to A4, Letter, Legal, A3 or A5. Now: '+so.textContent.replace(/^Paper: /,'')+'.';
+  $('placew').dataset.d='Where a page sits on the paper when the size is not Original. Now: '+po.textContent.replace(/^Place: /,'')+'.';
 }
-$('size').onchange=syncOpts;
+$('size').onchange=syncOpts;$('place').onchange=syncOpts;
 function mkTile(tag,label,fn,drop){
   const t=document.createElement(tag);t.className=(tag==='li'?'':'sth ')+'addt';
   t.tabIndex=0;t.setAttribute('role','button');t.setAttribute('aria-label',label);
@@ -430,11 +469,52 @@ async function bigOf(p){
 }
 function setDoc(d){
   list.classList.toggle('doc',d);$('work').classList.toggle('docmode',d);
-  $('viewmode').textContent=d?'Grid view':'Document view';
+  const vb=$('viewmode');vb.dataset.n=d?'Grid view':'Document view';
+  vb.dataset.d=d?'Show pages as small thumbnails you can drag to reorder.':'Show large pages one under another, like a Word document.';
+  vb.setAttribute('aria-label',vb.dataset.n);
   if(!d){document.body.classList.remove('wom');$('wobtn').classList.remove('on');if(mk.on)markOn(false)}
   render();
 }
 $('viewmode').onclick=()=>setDoc(!list.classList.contains('doc'));
+// ---- hover tips (name + what it does), like a toolbar in a design app. Mouse hover after a short pause, or keyboard focus.
+const tipEl=document.createElement('div');tipEl.id='tip';tipEl.hidden=true;tipEl.setAttribute('role','tooltip');document.body.appendChild(tipEl);
+let tipT=0,tipOn=null;
+function tipHide(){clearTimeout(tipT);tipT=0;tipOn=null;tipEl.hidden=true}
+function tipShow(el){
+  tipOn=el;tipEl.innerHTML='<b></b><span></span>';tipEl.firstChild.textContent=el.dataset.n;tipEl.lastChild.textContent=el.dataset.d||'';
+  tipEl.hidden=false;
+  const r=el.getBoundingClientRect(),w=tipEl.offsetWidth,h=tipEl.offsetHeight;
+  const x=Math.min(Math.max(8,r.left+r.width/2-w/2),innerWidth-w-8);let y=r.bottom+8;
+  if(y+h>innerHeight-8)y=Math.max(8,r.top-h-8);
+  tipEl.style.left=x+'px';tipEl.style.top=y+'px';
+}
+document.addEventListener('pointerover',e=>{
+  if(e.pointerType!=='mouse')return;
+  const el=e.target.closest&&e.target.closest('[data-n]');
+  if(!el||el===tipOn)return;
+  tipHide();tipOn=el;tipT=setTimeout(()=>tipShow(el),350);
+});
+document.addEventListener('pointerout',e=>{const el=e.target.closest&&e.target.closest('[data-n]');if(el&&!el.contains(e.relatedTarget))tipHide()});
+document.addEventListener('pointerdown',tipHide);
+document.addEventListener('scroll',tipHide,true);
+document.addEventListener('focusin',e=>{const el=e.target.closest&&e.target.closest('[data-n]');if(el&&el.matches(':focus-visible')){tipHide();tipShow(el)}});
+document.addEventListener('focusout',tipHide);
+addEventListener('keydown',e=>{if(e.key==='Escape')tipHide()});
+// touch: press and hold an icon to see its name and use (a normal tap still works)
+let lpT=0,lpDone=false,lpX=0,lpY=0;
+document.addEventListener('pointerdown',e=>{
+  clearTimeout(lpT);lpT=0;lpDone=false;
+  if(e.pointerType==='mouse')return;
+  const el=e.target.closest&&e.target.closest('[data-n]');if(!el)return;
+  lpX=e.clientX;lpY=e.clientY;
+  lpT=setTimeout(()=>{lpT=0;lpDone=true;tipShow(el);setTimeout(()=>{if(tipOn===el)tipHide()},2400)},450);
+});
+const lpStop=()=>{clearTimeout(lpT);lpT=0};
+document.addEventListener('pointerup',lpStop);document.addEventListener('pointercancel',lpStop);
+document.addEventListener('pointermove',e=>{if(lpT&&Math.hypot(e.clientX-lpX,e.clientY-lpY)>10)lpStop()});
+document.addEventListener('click',e=>{if(lpDone){lpDone=false;e.preventDefault();e.stopPropagation()}},true);
+document.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closest('[data-n]'))e.preventDefault()});
+
 const readyMsg=()=>pages.length?pages.length+' page'+(pages.length>1?'s':'')+' ready.':'';
 $('wobtn').onclick=()=>{
   const on=!document.body.classList.contains('wom');
@@ -626,7 +706,7 @@ function sortable(el){
   el.addEventListener('pointermove',e=>{
     if(!drag)return;
     if(el===$('side')){const r=el.getBoundingClientRect();if(e.clientY<r.top+30)el.scrollTop-=12;else if(e.clientY>r.bottom-30)el.scrollTop+=12}
-    else if(list.classList.contains('doc')){if(e.clientY<110)scrollBy(0,-14);else if(e.clientY>innerHeight-60)scrollBy(0,14)}
+    else{const hb=document.querySelector('header').getBoundingClientRect().bottom;if(e.clientY<hb+30)scrollBy(0,-14);else if(e.clientY>innerHeight-70)scrollBy(0,14)}
     const over=[...el.children].find(x=>{
       if(x===drag||!x._p)return false;
       const r=x.getBoundingClientRect();
